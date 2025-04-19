@@ -1,81 +1,81 @@
 import os
 import logging
 import asyncio
+import argparse
 from typing import Optional
 import uuid
 
-# In a production environment, you would import the actual TTS library
-# import TTS
-
+# Configure logging
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-async def generate_speech(text: str, output_path: Optional[str] = None) -> str:
+async def generate_hindi_speech(text: str, output_path: Optional[str] = None) -> str:
     """
-    Generate speech from text using Coqui TTS or similar service.
+    Generate Hindi speech from text using XTTS v2 model
     
     Args:
-        text: Text to convert to speech
-        output_path: Path to save the generated audio file. If None, a temporary path will be created.
-        
-    Returns:
-        Path to the generated audio file
-    """
-    try:
-        logger.info(f"Generating speech for text: {text[:50]}...")
-        
-        # Create a unique filename if output_path is not provided
-        if output_path is None:
-            os.makedirs("temp_audio", exist_ok=True)
-            output_path = f"temp_audio/speech_{uuid.uuid4()}.mp3"
-        
-        # Simulate processing time
-        await asyncio.sleep(2)
-        
-        # In a real implementation, you would use Coqui TTS to generate speech
-        # Example code (commented out):
-        # 
-        # from TTS.api import TTS
-        # tts = TTS(model_name="tts_models/hi/coqui/vits")
-        # tts.tts_to_file(text=text, file_path=output_path, speaker="female", language="hi")
-        
-        # For now, we'll create an empty audio file for testing
-        
-        # Create directory if it doesn't exist
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        
-        # Create an empty file (in a real implementation, this would be the audio file)
-        with open(output_path, "w") as f:
-            f.write("# This is a placeholder for the generated audio")
-            
-        logger.info(f"Generated speech saved to {output_path}")
-        return output_path
-        
-    except Exception as e:
-        logger.error(f"Error generating speech: {str(e)}")
-        raise
-
-# Function to adjust voice parameters based on emotional context
-async def generate_empathetic_speech(text: str, emotion: str = "neutral", output_path: Optional[str] = None) -> str:
-    """
-    Generate speech with emotional tone adjustments.
-    
-    Args:
-        text: Text to convert to speech
-        emotion: Emotional tone (neutral, confused, excited, etc.)
+        text: Hindi text to convert to speech
         output_path: Path to save the generated audio file
         
     Returns:
         Path to the generated audio file
     """
     try:
-        logger.info(f"Generating empathetic speech with emotion: {emotion}")
+        logger.info(f"Generating Hindi speech for text: {text[:50]}...")
         
-        # In a real implementation, you would adjust voice parameters based on emotion
-        # For example, slower speech for confused, more energetic for excited, etc.
+        # Create output path if not provided
+        if output_path is None:
+            output_dir = os.path.join(os.getcwd(), "hindi_audio")
+            os.makedirs(output_dir, exist_ok=True)
+            output_path = os.path.join(output_dir, f"hindi_{uuid.uuid4()}.wav")
+        else:
+            output_path = os.path.abspath(output_path)
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
         
-        # For now, we'll just pass through to the regular speech generation
-        return await generate_speech(text, output_path)
+        # Use XTTS v2 model which supports Hindi
+        model_name = "tts_models/multilingual/multi-dataset/xtts_v2"
         
+        try:
+            from TTS.api import TTS
+            logger.info("Loading Hindi TTS model...")
+            
+            # Initialize TTS with the selected model
+            tts = TTS(model_name=model_name)
+            
+            # Generate the audio file with Hindi settings
+            tts.tts_to_file(
+                text=text,
+                file_path=output_path,
+                speaker="female",  # You can try different speaker voices
+                language="hi"       # Language code for Hindi
+            )
+            
+            logger.info(f"Hindi audio generated at: {output_path}")
+            return output_path
+            
+        except ImportError:
+            logger.error("TTS library not installed. Please install with: pip install TTS")
+            raise
+        except Exception as e:
+            logger.error(f"Error in TTS generation: {str(e)}")
+            raise
+            
     except Exception as e:
-        logger.error(f"Error generating empathetic speech: {str(e)}")
+        logger.error(f"Error generating Hindi speech: {str(e)}")
         raise
+
+async def main():
+    parser = argparse.ArgumentParser(description="Hindi Text-to-Speech")
+    parser.add_argument("text", help="Hindi text to convert to speech")
+    parser.add_argument("--output", help="Output file path (optional)", default=None)
+    
+    args = parser.parse_args()
+    
+    try:
+        output_path = await generate_hindi_speech(args.text, args.output)
+        logger.info(f"Success! Hindi audio saved to: {output_path}")
+    except Exception as e:
+        logger.error(f"Failed to generate Hindi speech: {str(e)}")
+
+if __name__ == "__main__":
+    asyncio.run(main())
