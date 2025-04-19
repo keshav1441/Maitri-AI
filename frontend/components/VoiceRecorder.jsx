@@ -4,6 +4,7 @@ import { styled } from 'nativewind';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
 import { FontAwesome } from '@expo/vector-icons';
+import { HOST } from '@env';
 
 const VoiceRecorder = ({ onRecordingComplete, primaryDark }) => {
   const [recording, setRecording] = useState(null);
@@ -11,6 +12,7 @@ const VoiceRecorder = ({ onRecordingComplete, primaryDark }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [timerInterval, setTimerInterval] = useState(null);
+  const [transcribedText, setTranscribedText] = useState('');
 
   useEffect(() => {
     return () => {
@@ -94,7 +96,7 @@ const VoiceRecorder = ({ onRecordingComplete, primaryDark }) => {
               type: 'audio/m4a',
             });
 
-            const response = await fetch('http://localhost:8000/audio/speech-to-text', {
+            const response = await fetch(`${HOST}/text-to-speech`, {
               method: 'POST',
               body: formData,
               headers: {
@@ -115,6 +117,7 @@ const VoiceRecorder = ({ onRecordingComplete, primaryDark }) => {
             const result = await response.json();
             console.log('Transcribed text:', result.text);
             
+            setTranscribedText(result.text);
             onRecordingComplete({
               uri,
               size: fileInfo.size,
@@ -149,6 +152,16 @@ const VoiceRecorder = ({ onRecordingComplete, primaryDark }) => {
         <View className="items-center justify-center">
           <ActivityIndicator size="large" color={primaryDark || "#6A0DAD"} />
           <Text className="mt-2.5 text-base">Processing audio...</Text>
+        </View>
+      ) : transcribedText ? (
+        <View className="items-center justify-center mb-4">
+          <Text className="text-base text-gray-800 text-center">"{transcribedText}"</Text>
+          <TouchableOpacity 
+            className="mt-4 bg-gray-100 rounded-full px-4 py-2"
+            onPress={() => setTranscribedText('')}
+          >
+            <Text className="text-sm text-gray-600">Clear</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <>
