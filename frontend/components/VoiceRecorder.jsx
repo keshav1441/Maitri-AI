@@ -153,16 +153,6 @@ const VoiceRecorder = ({ onRecordingComplete, primaryDark }) => {
           <ActivityIndicator size="large" color={primaryDark || "#6A0DAD"} />
           <Text className="mt-2.5 text-base">Processing audio...</Text>
         </View>
-      ) : transcribedText ? (
-        <View className="items-center justify-center mb-4">
-          <Text className="text-base text-gray-800 text-center">"{transcribedText}"</Text>
-          <TouchableOpacity 
-            className="mt-4 bg-gray-100 rounded-full px-4 py-2"
-            onPress={() => setTranscribedText('')}
-          >
-            <Text className="text-sm text-gray-600">Clear</Text>
-          </TouchableOpacity>
-        </View>
       ) : (
         <>
           <Text className="text-lg mb-5 text-gray-700 font-medium">

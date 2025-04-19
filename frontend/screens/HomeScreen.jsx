@@ -14,10 +14,10 @@ import { StatusBar } from 'expo-status-bar';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import VoiceRecorder from '../components/VoiceRecorder';
 import ResponseBubble from '../components/ResponseBubble';
+import UserBubble from '../components/UserBubble';
 import SchemeCard from '../components/SchemeCard';
 import icon from '../assets/icon.png';
 
-const { width } = Dimensions.get('window');
 const LOCAL_SERVER = 'http://localhost:8000'; // 👈 Replace with your actual IP
 
 // Define our theme colors based on #4b6abd
@@ -28,6 +28,7 @@ const primaryExtraLight = '#c0d3f2';
 
 const HomeScreen = () => {
   const [response, setResponse] = useState('');
+  const [userMessage, setUserMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [schemes, setSchemes] = useState([]);
@@ -92,6 +93,7 @@ const HomeScreen = () => {
       setResponse('');
       setSchemes([]);
       setHasInteracted(true);
+      setUserMessage(recordingData.text);
 
       const formData = new FormData();
       formData.append('audio', {
@@ -113,6 +115,10 @@ const HomeScreen = () => {
       }
 
       const result = await response.json();
+      // Update user message immediately with transcribed text
+      setUserMessage(recordingData.text);
+      
+      // Update response after processing
       setResponse(result.response);
 
       if (result.schemes?.length > 0) {
@@ -198,6 +204,7 @@ const HomeScreen = () => {
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
       >
+        {userMessage && <UserBubble message={userMessage} />}
         <Animated.View className="p-6 items-center" style={{
           opacity: welcomeAnim,
           transform: [{ translateY: floatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -8] }) }]

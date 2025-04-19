@@ -34,7 +34,7 @@ async def speech_to_text(audio_file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/process")
-async def process_audio(background_tasks: BackgroundTasks, audio_file: UploadFile = File(...)):
+async def speech_to_text(audio_file: UploadFile = File(...)):
     try:
         temp_file_path = f"temp_uploads/{uuid.uuid4()}.wav"
         with open(temp_file_path, "wb") as temp_file:
@@ -42,16 +42,9 @@ async def process_audio(background_tasks: BackgroundTasks, audio_file: UploadFil
             temp_file.write(content)
         
         text = await transcribe_audio(temp_file_path)
-        
-        output_audio_path = f"temp_audio/{uuid.uuid4()}.mp3"
-        await generate_empathetic_speech(text, "neutral", output_audio_path)
-        
-        background_tasks.add_task(lambda: os.remove(temp_file_path) if os.path.exists(temp_file_path) else None)
-        
-        return {"text": text, "audio_url": f"/audio/{os.path.basename(output_audio_path)}"}
-        
+        os.remove(temp_file_path)
+        return {"text": text}
     except Exception as e:
-        logger.error(f"Error processing audio: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/{filename}")
