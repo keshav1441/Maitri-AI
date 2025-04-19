@@ -96,7 +96,7 @@ const VoiceRecorder = ({ onRecordingComplete, primaryDark }) => {
               type: 'audio/m4a',
             });
 
-            const response = await fetch(`${HOST}/text-to-speech`, {
+            const response = await fetch(`${HOST}/audio/speech-to-text`, {
               method: 'POST',
               body: formData,
               headers: {
