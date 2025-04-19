@@ -1,0 +1,23 @@
+# Backend dependencies
+fastapi==0.110.0
+uvicorn==0.27.1
+python-multipart==0.0.9
+pydantic==2.6.3
+asyncio==3.4.3
+python-dotenv==1.0.1
+
+# AI services
+# Uncomment these in production
+# google-generativeai==0.3.2  # For GeminiAPI
+# TTS==0.22.0  # For Coqui TTS
+# stt==1.0.0  # For Coqui STT
+# openai-whisper==20231117  # Alternative for speech recognition
+
+# Database
+# motor==3.3.2  # MongoDB async driver
+# pymongo==4.6.1
+
+# Utilities
+requests==2.31.0
+aiofiles==23.2.1
+python-jose==3.3.0  # For JWT tokens
