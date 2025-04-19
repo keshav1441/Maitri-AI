@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { styled } from 'nativewind';
 import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
 import { FontAwesome } from '@expo/vector-icons';
@@ -68,20 +69,36 @@ const VoiceRecorder = ({ onRecordingComplete }) => {
       setIsRecording(false);
       setIsProcessing(true);
 
-      // Stop recording
-      await recording.stopAndUnloadAsync();
+      // Get URI before stopping the recording
       const uri = recording.getURI();
+      
+      try {
+        // Stop recording
+        await recording.stopAndUnloadAsync();
+      } catch (error) {
+        console.log('Recording may already be unloaded:', error);
+      }
+      
       setRecording(null);
       setRecordingDuration(0);
 
-      // Process the recording
+      // Process the recording if we have a valid URI
       if (uri && onRecordingComplete) {
-        const fileInfo = await FileSystem.getInfoAsync(uri);
-        onRecordingComplete({
-          uri,
-          size: fileInfo.size,
-          duration: recordingDuration,
-        });
+        try {
+          const fileInfo = await FileSystem.getInfoAsync(uri);
+          if (fileInfo.exists) {
+            onRecordingComplete({
+              uri,
+              size: fileInfo.size,
+              duration: recordingDuration,
+            });
+          } else {
+            throw new Error('Recording file not found');
+          }
+        } catch (error) {
+          console.error('Error processing recording file:', error);
+          alert('Failed to process recording. Please try again.');
+        }
       }
 
       setIsProcessing(false);
@@ -98,19 +115,19 @@ const VoiceRecorder = ({ onRecordingComplete }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <View className="items-center justify-center p-5">
       {isProcessing ? (
-        <View style={styles.processingContainer}>
+        <View className="items-center justify-center">
           <ActivityIndicator size="large" color="#6A0DAD" />
-          <Text style={styles.processingText}>Processing audio...</Text>
+          <Text className="mt-2.5 text-purple-700 text-base">Processing audio...</Text>
         </View>
       ) : (
         <>
-          <Text style={styles.timerText}>
+          <Text className="text-lg mb-5 text-gray-700 font-medium">
             {isRecording ? formatTime(recordingDuration) : 'Press to speak'}
           </Text>
           <TouchableOpacity
-            style={[styles.recordButton, isRecording && styles.recordingActive]}
+            className={`items-center justify-center shadow-lg ${isRecording ? 'w-[90px] h-[90px] rounded-[45px] bg-red-500' : 'w-20 h-20 rounded-[40px] bg-purple-700'}`}
             onPress={isRecording ? stopRecording : startRecording}
             activeOpacity={0.7}
           >
@@ -121,59 +138,12 @@ const VoiceRecorder = ({ onRecordingComplete }) => {
             />
           </TouchableOpacity>
           {isRecording && (
-            <Text style={styles.hintText}>Tap to stop recording</Text>
+            <Text className="mt-4 text-gray-600 text-sm">Tap to stop recording</Text>
           )}
         </>
       )}
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  recordButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#6A0DAD',
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
-  },
-  recordingActive: {
-    backgroundColor: '#FF4136',
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-  },
-  timerText: {
-    fontSize: 18,
-    marginBottom: 20,
-    color: '#333',
-    fontWeight: '500',
-  },
-  hintText: {
-    marginTop: 15,
-    color: '#666',
-    fontSize: 14,
-  },
-  processingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  processingText: {
-    marginTop: 10,
-    color: '#6A0DAD',
-    fontSize: 16,
-  },
-});
 
 export default VoiceRecorder;

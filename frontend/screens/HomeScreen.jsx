@@ -1,13 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, Image } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+  View, 
+  Text, 
+  ScrollView, 
+  SafeAreaView, 
+  TouchableOpacity, 
+  Image, 
+  Animated, 
+  Dimensions
+} from 'react-native';
+import { styled } from 'nativewind';
 import { Audio } from 'expo-av';
 import { StatusBar } from 'expo-status-bar';
+import { LinearGradient } from 'expo-linear-gradient';
+import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import VoiceRecorder from '../components/VoiceRecorder';
 import ResponseBubble from '../components/ResponseBubble';
 import SchemeCard from '../components/SchemeCard';
 import * as api from '../services/api';
+import icon from '../assets/icon.png';
 
-// No mock data needed as we'll fetch real data from the API
+const { width } = Dimensions.get('window');
 
 const HomeScreen = () => {
   const [response, setResponse] = useState('');
@@ -17,6 +30,14 @@ const HomeScreen = () => {
   const [expandedSchemeId, setExpandedSchemeId] = useState(null);
   const [sound, setSound] = useState(null);
   const [audioUrl, setAudioUrl] = useState('');
+  const [hasInteracted, setHasInteracted] = useState(false);
+  
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const welcomeAnim = useRef(new Animated.Value(1)).current;
+  const floatAnim = useRef(new Animated.Value(0)).current;
+  const scrollViewRef = useRef();
 
   // Clean up sound on unmount
   useEffect(() => {
@@ -27,11 +48,55 @@ const HomeScreen = () => {
       : undefined;
   }, [sound]);
 
+  useEffect(() => {
+    // Initial animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Start floating animation for welcome container
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, {
+          toValue: 1,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatAnim, {
+          toValue: 0,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
+
+  useEffect(() => {
+    // Animate welcome container
+    if (hasInteracted) {
+      Animated.timing(welcomeAnim, {
+        toValue: 0.6,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [hasInteracted]);
+
   const handleRecordingComplete = async (recordingData) => {
     try {
       setIsLoading(true);
       setResponse('');
       setSchemes([]);
+      setHasInteracted(true);
       
       // Send the audio file to the backend for processing
       const result = await api.processAudio(recordingData);
@@ -50,6 +115,13 @@ const HomeScreen = () => {
       }
       
       setIsLoading(false);
+      
+      // Scroll to response
+      if (scrollViewRef.current) {
+        setTimeout(() => {
+          scrollViewRef.current.scrollTo({ y: 120, animated: true });
+        }, 100);
+      }
       
       // Play the audio response
       if (result.audio_url) {
@@ -107,122 +179,135 @@ const HomeScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar style="dark" />
-      <View style={styles.header}>
-        <Image 
-          source={require('../assets/icon.png')} 
-          style={styles.logo} 
-          resizeMode="contain"
-        />
-        <Text style={styles.headerTitle}>Maitri AI</Text>
-      </View>
+    <SafeAreaView className="flex-1 bg-gray-50">
+      <StatusBar style="light" />
       
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
-        <View style={styles.welcomeContainer}>
-          <Text style={styles.welcomeTitle}>नमस्ते! मैं आपकी सहायता के लिए हूँ</Text>
-          <Text style={styles.welcomeSubtitle}>मुझसे सरकारी योजनाओं के बारे में पूछें</Text>
+      <LinearGradient
+        colors={['#6A0DAD', '#8A2BE2']}
+        className="flex-row items-center justify-between px-6 py-5 rounded-b-[25px] shadow-lg"
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+      >
+        <View className="flex-row items-center space-x-3 pt-6">
+          <Image 
+            source={icon} 
+            className="w-10 h-10 m-2"
+            style={{ tintColor: '#fff' }}
+            resizeMode="contain"
+          />
+          <View>
+            <Text className="text-2xl font-bold text-white">Maitri AI</Text>
+            <Text className="text-purple-200 text-sm">Your Scheme Assistant</Text>
+          </View>
         </View>
+        <TouchableOpacity className="bg-white/20 rounded-full p-2.5">
+          <Ionicons name="help-circle-outline" size={24} color="white" />
+        </TouchableOpacity>
+      </LinearGradient>
+      
+      <ScrollView 
+        ref={scrollViewRef}
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <Animated.View 
+          className="p-5 items-center"
+          style={{
+            opacity: welcomeAnim,
+            transform: [
+              { translateY: floatAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, -10]
+              })}
+            ]
+          }}
+        >
+          <View className="bg-white rounded-3xl w-full p-6 items-center shadow-lg border border-purple-100">
+            <View className="bg-purple-50 rounded-full p-4 mb-4">
+              <FontAwesome name="comments" size={32} color="#6A0DAD" />
+            </View>
+            <Text className="text-2xl font-bold text-gray-800 text-center leading-tight">नमस्ते! मैं आपकी सहायता के लिए हूँ</Text>
+            <Text className="text-base text-gray-600 mt-3 text-center">मुझसे सरकारी योजनाओं के बारे में पूछें</Text>
+            
+            <View className="flex-row items-center bg-purple-50 py-3 px-5 rounded-full mt-5 border border-purple-100">
+              <View className="bg-purple-100 rounded-full p-2 mr-3">
+                <FontAwesome name="microphone" size={18} color="#6A0DAD" />
+              </View>
+              <Text className="text-sm text-gray-700 font-medium">बात करने के लिए माइक बटन पर क्लिक करें</Text>
+            </View>
+          </View>
+        </Animated.View>
         
         {(response || isLoading) && (
-          <ResponseBubble 
-            message={response} 
-            isLoading={isLoading} 
-            isPlaying={isPlaying}
-            onPlayAudio={() => {
-              if (audioUrl) {
-                playResponseAudio(audioUrl);
-              }
-            }}
-          />
+          <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+            <ResponseBubble 
+              message={response} 
+              isLoading={isLoading} 
+              isPlaying={isPlaying}
+              onPlayAudio={() => {
+                if (audioUrl) {
+                  playResponseAudio(audioUrl);
+                }
+              }}
+            />
+          </Animated.View>
         )}
         
         {schemes.length > 0 && (
-          <View style={styles.schemesContainer}>
-            <Text style={styles.schemesTitle}>आपके लिए योजनाएँ:</Text>
-            {schemes.map((scheme) => (
-              <SchemeCard 
+          <Animated.View 
+            className="p-4"
+            style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
+          >
+            <View className="flex-row items-center mb-3">
+              <FontAwesome name="star" size={18} color="#6A0DAD" className="mr-1.5" />
+              <Text className="text-lg font-bold text-gray-800">आपके लिए योजनाएँ:</Text>
+            </View>
+            
+            {schemes.map((scheme, index) => (
+              <Animated.View
                 key={scheme.id}
-                scheme={scheme}
-                expanded={expandedSchemeId === scheme.id}
-                onToggleExpand={() => toggleSchemeExpand(scheme.id)}
-              />
+                style={{
+                  opacity: fadeAnim,
+                  transform: [{ 
+                    translateY: Animated.multiply(
+                      slideAnim, 
+                      new Animated.Value((index + 1) * 0.3)
+                    ) 
+                  }]
+                }}
+              >
+                <SchemeCard 
+                  scheme={scheme}
+                  expanded={expandedSchemeId === scheme.id}
+                  onToggleExpand={() => toggleSchemeExpand(scheme.id)}
+                />
+              </Animated.View>
             ))}
-          </View>
+          </Animated.View>
         )}
+        
+        <View className="h-20" />
       </ScrollView>
       
-      <View style={styles.recorderContainer}>
-        <VoiceRecorder onRecordingComplete={handleRecordingComplete} />
-      </View>
+      <Animated.View 
+        className="absolute bottom-0 left-0 right-0"
+        style={{
+          transform: [{ translateY: fadeAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [100, 0]
+          })}]
+        }}
+      >
+        <LinearGradient
+          colors={['rgba(255,255,255,0.8)', '#ffffff']}
+          className="pt-4 pb-6 rounded-t-[20px] shadow-lg"
+        >
+          <VoiceRecorder onRecordingComplete={handleRecordingComplete} />
+        </LinearGradient>
+      </Animated.View>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F8F8F8',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  logo: {
-    width: 32,
-    height: 32,
-    marginRight: 8,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#6A0DAD',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  contentContainer: {
-    paddingBottom: 100,
-  },
-  welcomeContainer: {
-    padding: 20,
-    alignItems: 'center',
-  },
-  welcomeTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
-  },
-  welcomeSubtitle: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  schemesContainer: {
-    padding: 16,
-  },
-  schemesTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 8,
-  },
-  recorderContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: '#fff',
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-  },
-});
 
 export default HomeScreen;
