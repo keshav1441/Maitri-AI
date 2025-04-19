@@ -5,7 +5,7 @@ import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system';
 import { FontAwesome } from '@expo/vector-icons';
 
-const VoiceRecorder = ({ onRecordingComplete }) => {
+const VoiceRecorder = ({ onRecordingComplete, primaryDark }) => {
   const [recording, setRecording] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -71,14 +71,14 @@ const VoiceRecorder = ({ onRecordingComplete }) => {
 
       // Get URI before stopping the recording
       const uri = recording.getURI();
-      
+
       try {
         // Stop recording
         await recording.stopAndUnloadAsync();
       } catch (error) {
         console.log('Recording may already be unloaded:', error);
       }
-      
+
       setRecording(null);
       setRecordingDuration(0);
 
@@ -118,8 +118,8 @@ const VoiceRecorder = ({ onRecordingComplete }) => {
     <View className="items-center justify-center p-5">
       {isProcessing ? (
         <View className="items-center justify-center">
-          <ActivityIndicator size="large" color="#6A0DAD" />
-          <Text className="mt-2.5 text-purple-700 text-base">Processing audio...</Text>
+          <ActivityIndicator size="large" color={primaryDark || "#6A0DAD"} />
+          <Text className="mt-2.5 text-base">Processing audio...</Text>
         </View>
       ) : (
         <>
@@ -127,7 +127,8 @@ const VoiceRecorder = ({ onRecordingComplete }) => {
             {isRecording ? formatTime(recordingDuration) : 'Press to speak'}
           </Text>
           <TouchableOpacity
-            className={`items-center justify-center shadow-lg ${isRecording ? 'w-[90px] h-[90px] rounded-[45px] bg-red-500' : 'w-20 h-20 rounded-[40px] bg-purple-700'}`}
+            className={`items-center justify-center shadow-lg ${isRecording ? 'w-[90px] h-[90px] rounded-[45px] bg-red-500' : 'w-20 h-20 rounded-[40px]'}`}
+            style={{ backgroundColor: isRecording ? '#dc2626' : '#4b6abd' }}
             onPress={isRecording ? stopRecording : startRecording}
             activeOpacity={0.7}
           >
