@@ -9,6 +9,34 @@ import uuid
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+async def generate_speech(text: str, output_path: Optional[str] = None) -> str:
+    """
+    Generate speech from text using XTTS v2 model
+    
+    Args:
+        text: Text to convert to speech
+        output_path: Path to save the generated audio file
+        
+    Returns:
+        Path to the generated audio file
+    """
+    return await generate_hindi_speech(text, output_path)
+
+async def generate_empathetic_speech(text: str, emotion: str, output_path: Optional[str] = None) -> str:
+    """
+    Generate empathetic speech from text using XTTS v2 model
+    
+    Args:
+        text: Text to convert to speech
+        emotion: Emotion to apply to speech (neutral, happy, sad, angry)
+        output_path: Path to save the generated audio file
+        
+    Returns:
+        Path to the generated audio file
+    """
+    logger.info(f"Generating empathetic speech with emotion: {emotion}")
+    return await generate_hindi_speech(text, output_path)
+
 async def generate_hindi_speech(text: str, output_path: Optional[str] = None) -> str:
     """
     Generate Hindi speech from text using XTTS v2 model

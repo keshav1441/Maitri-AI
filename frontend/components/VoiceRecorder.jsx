@@ -87,10 +87,39 @@ const VoiceRecorder = ({ onRecordingComplete, primaryDark }) => {
         try {
           const fileInfo = await FileSystem.getInfoAsync(uri);
           if (fileInfo.exists) {
+            const formData = new FormData();
+            formData.append('audio_file', {
+              uri,
+              name: 'recording.m4a',
+              type: 'audio/m4a',
+            });
+
+            const response = await fetch('http://localhost:8000/audio/speech-to-text', {
+              method: 'POST',
+              body: formData,
+              headers: {
+                'Content-Type': 'multipart/form-data',
+              },
+            }).catch(error => {
+              console.error('Network request failed:', error);
+              throw error;
+            });
+
+            if (!response.ok) {
+              console.error('Server response error:', response.status, response.statusText);
+              throw new Error('Failed to process audio');
+            }
+
+            console.log('Audio successfully sent to backend');
+
+            const result = await response.json();
+            console.log('Transcribed text:', result.text);
+            
             onRecordingComplete({
               uri,
               size: fileInfo.size,
               duration: recordingDuration,
+              text: result.text,
             });
           } else {
             throw new Error('Recording file not found');
