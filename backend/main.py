@@ -14,6 +14,10 @@ from services.intent_classification import classify_intent, generate_response
 from services.scheme_matching import match_schemes, get_scheme_by_id
 from services.text_to_speech import generate_speech, generate_empathetic_speech
 
+# Import routers
+from routes.audio import router as audio_router
+from routes.schemes import router as schemes_router
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -23,6 +27,10 @@ logger = logging.getLogger(__name__)
 
 # Create FastAPI app
 app = FastAPI(title="Maitri AI API", description="API for Maitri AI - Women-Centric AI Scheme Advisor")
+
+# Mount routers
+app.include_router(audio_router)
+app.include_router(schemes_router)
 
 # Configure CORS
 app.add_middleware(
@@ -51,67 +59,6 @@ class SchemeRequest(BaseModel):
 @app.get("/")
 async def read_root():
     return {"message": "Welcome to Maitri AI API"}
-
-@app.post("/process-audio", response_model=ProcessAudioResponse)
-async def process_audio(background_tasks: BackgroundTasks, audio_file: UploadFile = File(...)):
-    try:
-        # Save uploaded audio file
-        temp_file_path = f"temp_uploads/{uuid.uuid4()}.wav"
-        with open(temp_file_path, "wb") as temp_file:
-            content = await audio_file.read()
-            temp_file.write(content)
-        
-        # Process the audio file
-        # 1. Transcribe audio to text
-        transcribed_text = await transcribe_audio(temp_file_path)
-        
-        # 2. Classify intent
-        intent_data = await classify_intent(transcribed_text)
-        
-        # 3. Match schemes based on user profile
-        matched_schemes = await match_schemes(intent_data.get("user_profile", {}))
-        
-        # 4. Generate response
-        response_text = await generate_response(intent_data, matched_schemes)
-        
-        # 5. Generate speech from response
-        output_audio_path = f"temp_audio/{uuid.uuid4()}.mp3"
-        await generate_empathetic_speech(response_text, "neutral", output_audio_path)
-        
-        # Clean up temporary files in the background
-        background_tasks.add_task(lambda: os.remove(temp_file_path) if os.path.exists(temp_file_path) else None)
-        
-        # Return response
-        return {
-            "text": transcribed_text,
-            "intent": intent_data,
-            "schemes": matched_schemes,
-            "response": response_text,
-            "audio_url": f"/audio/{os.path.basename(output_audio_path)}"
-        }
-        
-    except Exception as e:
-        logger.error(f"Error processing audio: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/audio/{filename}")
-async def get_audio(filename: str):
-    file_path = f"temp_audio/{filename}"
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="Audio file not found")
-    return FileResponse(file_path, media_type="audio/mpeg")
-
-@app.get("/schemes")
-async def get_schemes():
-    from services.scheme_matching import SCHEMES_DB
-    return {"schemes": SCHEMES_DB}
-
-@app.post("/scheme")
-async def get_scheme(request: SchemeRequest):
-    scheme = await get_scheme_by_id(request.scheme_id)
-    if not scheme:
-        raise HTTPException(status_code=404, detail="Scheme not found")
-    return {"scheme": scheme}
 
 if __name__ == "__main__":
     import uvicorn

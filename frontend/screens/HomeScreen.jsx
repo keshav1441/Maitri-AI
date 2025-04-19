@@ -9,23 +9,22 @@ import {
   Animated,
   Dimensions
 } from 'react-native';
-import { styled } from 'nativewind';
 import { Audio } from 'expo-av';
 import { StatusBar } from 'expo-status-bar';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import VoiceRecorder from '../components/VoiceRecorder';
 import ResponseBubble from '../components/ResponseBubble';
 import SchemeCard from '../components/SchemeCard';
-import * as api from '../services/api';
 import icon from '../assets/icon.png';
 
 const { width } = Dimensions.get('window');
+const LOCAL_SERVER = 'http://localhost:8000'; // 👈 Replace with your actual IP
 
 // Define our theme colors based on #4b6abd
 const primaryColor = '#4b6abd';
-const primaryLight = '#829bda'; // Light tint
-const primaryDark = '#304a7d';   // Dark shade
-const primaryExtraLight = '#c0d3f2'; // Very light tint
+const primaryLight = '#829bda';
+const primaryDark = '#304a7d';
+const primaryExtraLight = '#c0d3f2';
 
 const HomeScreen = () => {
   const [response, setResponse] = useState('');
@@ -37,24 +36,17 @@ const HomeScreen = () => {
   const [audioUrl, setAudioUrl] = useState('');
   const [hasInteracted, setHasInteracted] = useState(false);
 
-  // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const welcomeAnim = useRef(new Animated.Value(1)).current;
   const floatAnim = useRef(new Animated.Value(0)).current;
   const scrollViewRef = useRef();
 
-  // Clean up sound on unmount
   useEffect(() => {
-    return sound
-      ? () => {
-          sound.unloadAsync();
-        }
-      : undefined;
+    return sound ? () => sound.unloadAsync() : undefined;
   }, [sound]);
 
   useEffect(() => {
-    // Initial animations
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -68,7 +60,6 @@ const HomeScreen = () => {
       }),
     ]).start();
 
-    // Start floating animation for welcome container
     Animated.loop(
       Animated.sequence([
         Animated.timing(floatAnim, {
@@ -86,7 +77,6 @@ const HomeScreen = () => {
   }, []);
 
   useEffect(() => {
-    // Animate welcome container
     if (hasInteracted) {
       Animated.timing(welcomeAnim, {
         toValue: 0.6,
@@ -103,32 +93,44 @@ const HomeScreen = () => {
       setSchemes([]);
       setHasInteracted(true);
 
-      // Send the audio file to the backend for processing
-      const result = await api.processAudio(recordingData);
+      const formData = new FormData();
+      formData.append('audio', {
+        uri: recordingData.uri,
+        name: 'recording.m4a',
+        type: 'audio/m4a',
+      });
 
-      // Set the response text
+      const response = await fetch(`${LOCAL_SERVER}/process-audio`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to process audio');
+      }
+
+      const result = await response.json();
       setResponse(result.response);
 
-      // Set the matched schemes
-      if (result.schemes && result.schemes.length > 0) {
+      if (result.schemes?.length > 0) {
         setSchemes(result.schemes);
       }
 
-      // Store the audio URL for later use and set loading to false
       if (result.audio_url) {
         setAudioUrl(result.audio_url);
       }
 
       setIsLoading(false);
 
-      // Scroll to response
       if (scrollViewRef.current) {
         setTimeout(() => {
           scrollViewRef.current.scrollTo({ y: 120, animated: true });
         }, 100);
       }
 
-      // Play the audio response
       if (result.audio_url) {
         await playResponseAudio(result.audio_url);
       }
@@ -140,31 +142,21 @@ const HomeScreen = () => {
     }
   };
 
-  const playResponseAudio = async (audioUrl) => {
-    // Play the TTS audio from the backend
+  const playResponseAudio = async (urlPath) => {
     try {
       setIsPlaying(true);
 
-      // Download and play the audio file
-      if (sound) {
-        await sound.unloadAsync();
-      }
+      if (sound) await sound.unloadAsync();
 
-      // If we have a full URL, use it directly, otherwise prepend the API base URL
-      const fullAudioUrl = audioUrl.startsWith('http')
-        ? audioUrl
-        : `${api.API_BASE_URL}${audioUrl}`;
+      const fullUrl = urlPath.startsWith('http')
+        ? urlPath
+        : `${LOCAL_SERVER}${urlPath}`;
 
-      // Download and play the audio
-      const audioUri = await api.downloadAudioResponse(fullAudioUrl);
-
-      // Create a new sound object
       const { sound: newSound } = await Audio.Sound.createAsync(
-        { uri: audioUri },
+        { uri: fullUrl },
         { shouldPlay: true }
       );
 
-      // Set the sound object and add an event listener for when playback finishes
       setSound(newSound);
 
       newSound.setOnPlaybackStatusUpdate((status) => {
@@ -184,23 +176,15 @@ const HomeScreen = () => {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white"> {/* White Background */}
+    <SafeAreaView className="flex-1 bg-white">
       <StatusBar style="light" />
 
-      <View
-        className="flex-row items-center justify-between px-6 py-5 shadow-md"
-        style={{ backgroundColor: primaryColor }}
-      >
+      <View className="flex-row items-center justify-between px-6 py-5 shadow-md" style={{ backgroundColor: primaryColor }}>
         <View className="flex-row items-center space-x-3 pt-6">
-          <Image
-            source={icon}
-            className="w-12 h-12 m-2 rounded-md"
-            style={{ tintColor: 'white' }}
-            resizeMode="contain"
-          />
+          <Image source={icon} className="w-12 h-12 m-2 rounded-md" style={{ tintColor: 'white' }} resizeMode="contain" />
           <View>
             <Text className="text-3xl font-bold text-white">Maitri AI</Text>
-            <Text className="text-yellow-200 text-lg">Your Scheme Assistant</Text> {/* Keeping a touch of warmth */}
+            <Text className="text-yellow-200 text-lg">Your Scheme Assistant</Text>
           </View>
         </View>
         <TouchableOpacity className="bg-white/20 rounded-full p-3">
@@ -214,28 +198,20 @@ const HomeScreen = () => {
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View
-          className="p-6 items-center"
-          style={{
-            opacity: welcomeAnim,
-            transform: [
-              { translateY: floatAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0, -8]
-              }) }
-            ]
-          }}
-        >
-          <View className="bg-white rounded-3xl w-full p-8 items-center shadow-lg border" style={{ borderColor: primaryLight }}> {/* Light Blue-Purple Border */}
-            <View className="bg-white rounded-full p-5 mb-5" style={{ backgroundColor: primaryExtraLight }}> {/* Very Light Blue-Purple Icon Background */}
-              <FontAwesome name="comments" size={38} color={primaryDark} /> {/* Dark Blue-Purple Icon */}
+        <Animated.View className="p-6 items-center" style={{
+          opacity: welcomeAnim,
+          transform: [{ translateY: floatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -8] }) }]
+        }}>
+          <View className="bg-white rounded-3xl w-full p-8 items-center shadow-lg border" style={{ borderColor: primaryLight }}>
+            <View className="bg-white rounded-full p-5 mb-5" style={{ backgroundColor: primaryExtraLight }}>
+              <FontAwesome name="comments" size={38} color={primaryDark} />
             </View>
             <Text className="text-3xl font-bold text-gray-800 text-center leading-tight">नमस्ते! मैं आपकी सहायता के लिए हूँ</Text>
             <Text className="text-lg text-gray-700 mt-4 text-center">मुझसे सरकारी योजनाओं के बारे में पूछें</Text>
 
-            <View className="flex-row items-center bg-white py-4 px-6 rounded-full mt-6 border" style={{ borderColor: primaryLight }}> {/* Light Blue-Purple Border */}
-              <View className="bg-white rounded-full p-3 mr-4" style={{ backgroundColor: primaryLight }}> {/* Light Blue-Purple Microphone Background */}
-                <FontAwesome name="microphone" size={22} color={primaryDark} /> {/* Dark Blue-Purple Microphone Icon */}
+            <View className="flex-row items-center bg-white py-4 px-6 rounded-full mt-6 border" style={{ borderColor: primaryLight }}>
+              <View className="bg-white rounded-full p-3 mr-4" style={{ backgroundColor: primaryLight }}>
+                <FontAwesome name="microphone" size={22} color={primaryDark} />
               </View>
               <Text className="text-lg text-gray-700 font-medium">बात करने के लिए माइक बटन पर क्लिक करें</Text>
             </View>
@@ -258,13 +234,10 @@ const HomeScreen = () => {
         )}
 
         {schemes.length > 0 && (
-          <Animated.View
-            className="p-5"
-            style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
-          >
+          <Animated.View className="p-5" style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
             <View className="flex-row items-center mb-4">
-              <FontAwesome name="star" size={20} color={primaryDark} className="mr-2" /> {/* Dark Blue-Purple Star */}
-              <Text className="text-xl font-bold text-gray-800">आपके लिए योजनाएँ:</Text>
+              <FontAwesome name="star" size={20} color={primaryDark} />
+              <Text className="text-xl font-bold text-gray-800 ml-2">आपके लिए योजनाएँ:</Text>
             </View>
 
             {schemes.map((scheme, index) => (
@@ -293,19 +266,10 @@ const HomeScreen = () => {
         <View className="h-24" />
       </ScrollView>
 
-      <Animated.View
-        className="absolute bottom-0 left-0 right-0"
-        style={{
-          transform: [{ translateY: fadeAnim.interpolate({
-            inputRange: [0, 1],
-            outputRange: [120, 0]
-          })}]
-        }}
-      >
-        <View
-          className="pt-5 pb-7 rounded-t-[30px] shadow-xl"
-          style={{ backgroundColor: primaryExtraLight }}
-        >
+      <Animated.View className="absolute bottom-0 left-0 right-0" style={{
+        transform: [{ translateY: fadeAnim.interpolate({ inputRange: [0, 1], outputRange: [120, 0] }) }]
+      }}>
+        <View className="pt-5 pb-7 rounded-t-[30px] shadow-xl" style={{ backgroundColor: primaryExtraLight }}>
           <VoiceRecorder onRecordingComplete={handleRecordingComplete} />
         </View>
       </Animated.View>
