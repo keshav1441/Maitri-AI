@@ -205,25 +205,27 @@ const HomeScreen = () => {
         showsVerticalScrollIndicator={false}
       >
         {userMessage && <UserBubble message={userMessage} />}
-        <Animated.View className="p-6 items-center" style={{
-          opacity: welcomeAnim,
-          transform: [{ translateY: floatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -8] }) }]
-        }}>
-          <View className="bg-white rounded-3xl w-full p-8 items-center shadow-lg border" style={{ borderColor: primaryLight }}>
-            <View className="bg-white rounded-full p-5 mb-5" style={{ backgroundColor: primaryExtraLight }}>
-              <FontAwesome name="comments" size={38} color={primaryDark} />
-            </View>
-            <Text className="text-3xl font-bold text-gray-800 text-center leading-tight">नमस्ते! मैं आपकी सहायता के लिए हूँ</Text>
-            <Text className="text-lg text-gray-700 mt-4 text-center">मुझसे सरकारी योजनाओं के बारे में पूछें</Text>
-
-            <View className="flex-row items-center bg-white py-4 px-6 rounded-full mt-6 border" style={{ borderColor: primaryLight }}>
-              <View className="bg-white rounded-full p-3 mr-4" style={{ backgroundColor: primaryLight }}>
-                <FontAwesome name="microphone" size={22} color={primaryDark} />
+        {!userMessage && (
+          <Animated.View className="p-6 items-center" style={{
+            opacity: welcomeAnim,
+            transform: [{ translateY: floatAnim.interpolate({ inputRange: [0, 1], outputRange: [0, -8] }) }]
+          }}>
+            <View className="bg-white rounded-3xl w-full p-8 items-center shadow-lg border" style={{ borderColor: primaryLight }}>
+              <View className="bg-white rounded-full p-5 mb-5" style={{ backgroundColor: primaryExtraLight }}>
+                <FontAwesome name="comments" size={38} color={primaryDark} />
               </View>
-              <Text className="text-lg text-gray-700 font-medium">बात करने के लिए माइक बटन पर क्लिक करें</Text>
+              <Text className="text-3xl font-bold text-gray-800 text-center leading-tight">नमस्ते! मैं आपकी सहायता के लिए हूँ</Text>
+              <Text className="text-lg text-gray-700 mt-4 text-center">मुझसे सरकारी योजनाओं के बारे में पूछें</Text>
+
+              <View className="flex-row items-center bg-white py-4 px-6 rounded-full mt-6 border" style={{ borderColor: primaryLight }}>
+                <View className="bg-white rounded-full p-3 mr-4" style={{ backgroundColor: primaryLight }}>
+                  <FontAwesome name="microphone" size={22} color={primaryDark} />
+                </View>
+                <Text className="text-lg text-gray-700 font-medium">बात करने के लिए माइक बटन पर क्लिक करें</Text>
+              </View>
             </View>
-          </View>
-        </Animated.View>
+          </Animated.View>
+        )}
 
         {(response || isLoading) && (
           <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
